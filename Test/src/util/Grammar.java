@@ -13,21 +13,12 @@ import java.util.*;
  */
 public class Grammar {
 	private Map<Character, String[]> data;
+	private Map<Character, Set<Character>> firstSet;
 	public static final String NULL = "#";
 
 	public Grammar() {
 		data = new HashMap<>();
-	}
-
-	/**
-	 * 本类内部功能测试
-	 * @param args
-	 */
-	public static void main(String[] args) {
-		Grammar g = new Grammar();
-		g.input();
-		g.print();
-		System.out.println(g.canToNull('A'));
+		firstSet = new HashMap<>();
 	}
 
 	// 输入文法
@@ -50,6 +41,73 @@ BC|AC|c
 			data.put(key, values);
 			key = scan.next().charAt(0);
 		}
+	}
+
+	/**
+	 * 求某个非终结符的first集
+	 * @param c : 非终结符
+	 * @return
+	 */
+	public Set<Character> first(Character c) {
+		return first(c, new ArrayList<Character>());
+	}
+
+	/**
+	 *
+	 * @param c
+	 * @param solving : 正在求first集的非终结符集
+	 * @return
+	 */
+	private Set<Character> first(Character c, List<Character> solving) {
+		Set<Character> result = null;
+		// 如果是终结符，直接返回
+		if (isTerminal(c)) {
+			result = new HashSet<>();
+			result.add(c);
+			return result;
+		}
+		// 如果有结果，则直接返回
+		result = firstSet.get(c);
+		if (result != null && result.size() > 0) {
+			return result;
+		}
+		// 是否正在求解；是：（返回空集）
+		if(solving.contains(c)) {
+			return new HashSet<>();
+		}
+		// 将自己加入求解队列
+		solving.add(c);
+		// 结果集
+		result = new HashSet<>();
+		// 获取右部
+		String[] rights = data.get(c);
+		// 逐个分析右部
+		for (String right : rights) {
+			char f = right.charAt(0);
+			if (NULL.charAt(0) != f) {
+				if(isTerminal(f)) {
+					result.add(f);
+				}
+				else {
+					result.addAll(first(f, solving));
+					for (int i = 1; i < right.length() && !isTerminal(right.charAt(i-1)) && canToNull(right.charAt(i-1)); i++) {
+						result.addAll(first(right.charAt(i), solving));
+					}
+				}
+			}
+		}
+		// 是否加入 空
+		if (canToNull(c)) {
+			result.add(NULL.charAt(0));
+		}
+		else {
+			result.remove(NULL.charAt(0));
+		}
+		// 将已经求解完的非终结符移除list
+		solving.remove(c);
+		// 将first集保存
+		firstSet.put(c, result);
+		return result;
 	}
 
 	/**
